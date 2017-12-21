@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="/public/css/yyui-1.1.2.min.css">
+  <style>
+    body {
+      background-image:url('/public/img/bg1.jpg'); 
+      background-size: cover; 
+      background-origin: center;
+      background-repeat: no-repeat;
+    }
+
+    .message-wrap {
+      height: 666px; 
+      overflow: auto; 
+      background-color:rgba(255,255,255, .8);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-full">
+    <div class="row m-t-10" id="app">
+      <div class="col-md-6 col-md-offset-3">
+        <div class="row message-wrap">
+          <div class="col-md-12 message-content p-vt-2" :name="username">
+            
+          </div>
+        </div>
+        <form onkeydown="if(event.keyCode==13){return false;}">
+          <div class="input-group input-group-underline m-t-2">
+            <input type="text" class="form-control" v-model="message" @keydown.enter="sendMsg" />
+            <div class="input-group-btn">
+              <button type="button" class="btn btn-primary" @click="sendMsg">发送</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.staticfile.org/vue/2.2.6/vue.min.js"></script>
+  <script src="https://cdn.staticfile.org/jquery/1.12.4/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.slim.js"></script>
+  <script>
+    window.onload = function () {
+      const socket = io.connect('http://10.34.135.123:3000');
+      const vm = new Vue({
+        el: '#app',
+        data: {
+          username: `用户 ${new Date().getTime()}`,
+          message: ''
+        },
+        methods: {
+          sendMsg: () => {
+            if (vm.message == '') {
+              return;
+            }
+
+            let con = {
+              username: vm.username,
+              message: vm.message
+            };
+
+            socket.emit('sendMsg', con);
+            clearMessage();
+          }
+        }
+      });
+
+      socket.open();
+      socket.on('news', data => {
+        fillMessage(data);
+      })
+
+      socket.on('disconnect', () => {
+        socket.open();
+      });
+
+      const clearMessage = client => {
+        vm.message = '';
+      }
+
+      function fillMessage(data) {
+        let content = $('.message-content');
+
+        if (content.attr('name') === data.username) {
+          content.append($(fillOwnMessage(data)));
+        } else {
+          content.append($(fillOthersMessage(data)));
+        }
+
+        let wrap = $('.message-wrap');
+        wrap.scrollTop(content.height());
+      }
+
+      function fillOthersMessage(data) {
+        return `<div class="media" style="padding-right: 100px;">
+                <div class="media-body">
+                  <h5 class="media-heading"><a href="javascript:;">${data.username}</a>
+                    <small>${data.date}</small>
+                  </h5>
+                  <p>
+                    ${data.message}
+                  </p>
+                </div>
+              </div>`;
+      }
+
+      function fillOwnMessage(data) {
+        return `<div class="media text-right" style="padding-left: 100px;">
+                <div class="media-body">
+                  <h5 class="media-heading"><a href="javascript:;">${data.username}</a>
+                    <small>${data.date}</small>
+                  </h5>
+                  <p class="text-right">
+                    ${data.message}
+                  </p>
+                </div>
+              </div>`;
+      }
+    }
+  </script>
+</body>
+
+</html>
